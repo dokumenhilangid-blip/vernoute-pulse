@@ -1,5 +1,5 @@
 import config from "../config.js";
-import { upsertService, updateServiceHealth, getServices, saveSnapshot } from "../db.js";
+import { upsertService, updateServiceHealth, getServices, saveSnapshot, memClear } from "../db.js";
 
 const KNOWN_SERVICES = [
   { name: "Exa", category: "Search", pricing_amount: 0.003, base_url: "https://api.exa.ai/contents", description: "AI-powered web search + content retrieval" },
@@ -115,6 +115,9 @@ export async function collectFromAgenticMarket(env) {
     totalVolume24h: totalVolume || 0,
     totalRequests24h: totalRequests || 0,
   });
+
+  // Clear in-memory cache so fresh data is served
+  memClear();
 
   console.log("Service collection complete");
 }

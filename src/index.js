@@ -1,5 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { secureHeaders } from "hono/secure-headers";
+import { cache } from "hono/cache";
 import { overviewRouter } from "./routes/overview.js";
 import { servicesRouter } from "./routes/services.js";
 import { collectFromAgenticMarket, probeServices } from "./collectors/agentic-market.js";
@@ -335,13 +337,16 @@ setTimeout(function(){
   }
 },8000);
 
-// Auto-refresh
-setTimeout(function(){location.reload()},60000);
+// Auto-refresh every 2 minutes (reduces KV reads vs 60s)
+setTimeout(function(){location.reload()},120000);
 </script>
 </body>
 </html>`;
 
 const app = new Hono();
+
+// Security headers (X-Frame-Options, X-Content-Type-Options, etc.)
+app.use(secureHeaders());
 
 // CORS
 app.use("/v1/pulse/*", cors({
@@ -369,8 +374,8 @@ app.use("/v1/pulse/*", async (c, next) => {
   await next();
 });
 
-// Landing page
-app.get("/", (c) => c.html(LANDING_HTML));
+// Landing page — cache at edge for 60s
+app.get("/", cache({ cacheName: "vernoute-landing", cacheControl: "max-age=60" }), (c) => c.html(LANDING_HTML));
 
 // Info
 app.get("/info", (c) => c.json({
@@ -384,7 +389,8 @@ app.get("/info", (c) => c.json({
   },
 }));
 
-// API routes
+// API routes — cache at edge for 30s
+app.get("/v1/pulse/*", cache({ cacheName: "vernoute-api", cacheControl: "max-age=30" }));
 app.route("/v1/pulse", overviewRouter);
 app.route("/v1/pulse", servicesRouter);
 

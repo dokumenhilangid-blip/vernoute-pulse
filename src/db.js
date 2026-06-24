@@ -1,5 +1,5 @@
 // KV-based storage for Cloudflare Workers
-// Works with both Module (env) and Service Worker (global) formats
+// With in-memory cache to reduce KV reads (free tier limit)
 
 // In Service Worker format, KV is available as a global variable
 // In Module format, it's passed via env parameter
@@ -12,6 +12,29 @@ function getKV(env) {
 const SERVICES_KEY = "services_data";
 const STATS_KEY = "stats_data";
 const SNAPSHOTS_KEY = "snapshots_data";
+
+// ── In-memory cache (avoids KV reads on every request) ──
+const memCache = new Map();
+const CACHE_TTL = 30000; // 30 seconds
+
+function memGet(key) {
+  const entry = memCache.get(key);
+  if (entry && Date.now() - entry.ts < CACHE_TTL) return entry.data;
+  return null;
+}
+function memSet(key, data) {
+  memCache.set(key, { data, ts: Date.now() });
+  // Auto-cleanup: delete old entries if cache grows too large
+  if (memCache.size > 20) {
+    const now = Date.now();
+    for (const [k, v] of memCache) {
+      if (now - v.ts > CACHE_TTL * 2) memCache.delete(k);
+    }
+  }
+}
+export function memClear() {
+  memCache.clear();
+}
 
 // --- Services ---
 export async function upsertService(env, service) {
@@ -29,6 +52,9 @@ export async function upsertService(env, service) {
 }
 
 export async function getServices(env) {
+  const cached = memGet('services_list');
+  if (cached) return cached;
+
   const kv = getKV(env);
   const raw = await kv.get(SERVICES_KEY);
   const services = raw ? JSON.parse(raw) : {};
@@ -36,7 +62,7 @@ export async function getServices(env) {
   const statsRaw = await kv.get(STATS_KEY);
   const stats = statsRaw ? JSON.parse(statsRaw) : {};
 
-  return Object.values(services).map((svc) => {
+  const result = Object.values(services).map((svc) => {
     const todayStats = stats[svc.id]?.[today] || {};
     return {
       id: svc.id,
@@ -52,9 +78,15 @@ export async function getServices(env) {
       avg_latency_ms: todayStats.avg_latency_ms || 0,
     };
   }).sort((a, b) => b.volume_24h - a.volume_24h);
+
+  memSet('services_list', result);
+  return result;
 }
 
 export async function getServiceById(env, id) {
+  const cached = memGet('service_' + id);
+  if (cached) return cached;
+
   const kv = getKV(env);
   const raw = await kv.get(SERVICES_KEY);
   const services = raw ? JSON.parse(raw) : {};
@@ -75,7 +107,7 @@ export async function getServiceById(env, id) {
     if (dayStats) trend.push({ date: dateStr, ...dayStats });
   }
 
-  return {
+  const result = {
     ...svc,
     requests_24h: todayStats.total_requests || 0,
     volume_24h: todayStats.total_volume || 0,
@@ -83,6 +115,9 @@ export async function getServiceById(env, id) {
     avg_latency_ms: todayStats.avg_latency_ms || 0,
     trend_7d: trend,
   };
+
+  memSet('service_' + id, result);
+  return result;
 }
 
 export async function updateServiceHealth(env, serviceId, latencyMs, success) {
@@ -131,13 +166,16 @@ export async function getLatestSnapshot(env) {
 
 // --- Overview ---
 export async function getOverviewData(env) {
+  const cached = memGet('overview');
+  if (cached) return cached;
+
   const services = await getServices(env);
   const latestSnapshot = await getLatestSnapshot(env);
   const kv = getKV(env);
   const raw = await kv.get(SERVICES_KEY);
   const servicesObj = raw ? JSON.parse(raw) : {};
 
-  return {
+  const result = {
     total_services: Object.keys(servicesObj).length,
     active_services: Object.values(servicesObj).filter((s) => s.status === "active").length,
     total_volume_24h: latestSnapshot?.total_volume_24h || 0,
@@ -145,4 +183,7 @@ export async function getOverviewData(env) {
     top_services: services.slice(0, 10),
     timestamp: new Date().toISOString(),
   };
+
+  memSet('overview', result);
+  return result;
 }
