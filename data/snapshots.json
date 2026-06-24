@@ -1,0 +1,26 @@
+[
+  {
+    "timestamp": "2026-06-24T14:38:55.230Z",
+    "totalServices": 0,
+    "activeServices": 0,
+    "totalVolume24h": 1123720.8922015817,
+    "totalRequests24h": 145654,
+    "topServiceId": "exa"
+  },
+  {
+    "timestamp": "2026-06-24T14:39:14.575Z",
+    "totalServices": 0,
+    "activeServices": 0,
+    "totalVolume24h": 1115624.5271653198,
+    "totalRequests24h": 133729,
+    "topServiceId": "exa"
+  },
+  {
+    "timestamp": "2026-06-24T14:39:45.808Z",
+    "totalServices": 0,
+    "activeServices": 0,
+    "totalVolume24h": 1479485.9185819123,
+    "totalRequests24h": 109765,
+    "topServiceId": "exa"
+  }
+]

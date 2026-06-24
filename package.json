@@ -1,0 +1,16 @@
+{
+  "name": "vernoute-pulse",
+  "version": "1.0.0",
+  "description": "Real-time analytics for the x402 AI agent economy on Base",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "type": "module",
+  "dependencies": {
+    "express": "^5.2.1",
+    "dotenv": "^17.4.2"
+  },
+  "devDependencies": {}
+}
