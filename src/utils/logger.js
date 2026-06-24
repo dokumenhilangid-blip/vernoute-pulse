@@ -1,21 +1,9 @@
-const LOG_LEVELS = { debug: 0, info: 1, warn: 2, error: 3 };
-const currentLevel = LOG_LEVELS[process.env.LOG_LEVEL] || LOG_LEVELS.info;
-
-function timestamp() {
-  return new Date().toISOString();
-}
+// Cloudflare Workers compatible logger
+// Workers uses console.log for logging (visible in Dashboard logs)
 
 export const logger = {
-  debug: (...args) => {
-    if (currentLevel <= LOG_LEVELS.debug) console.log(`[${timestamp()}] [DEBUG]`, ...args);
-  },
-  info: (...args) => {
-    if (currentLevel <= LOG_LEVELS.info) console.log(`[${timestamp()}] [INFO]`, ...args);
-  },
-  warn: (...args) => {
-    if (currentLevel <= LOG_LEVELS.warn) console.warn(`[${timestamp()}] [WARN]`, ...args);
-  },
-  error: (...args) => {
-    if (currentLevel <= LOG_LEVELS.error) console.error(`[${timestamp()}] [ERROR]`, ...args);
-  },
+  info: (msg, ...args) => console.log(`[INFO] ${msg}`, ...args),
+  warn: (msg, ...args) => console.warn(`[WARN] ${msg}`, ...args),
+  error: (msg, ...args) => console.error(`[ERROR] ${msg}`, ...args),
+  debug: (msg, ...args) => console.debug(`[DEBUG] ${msg}`, ...args),
 };

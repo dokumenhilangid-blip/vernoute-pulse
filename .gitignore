@@ -4,3 +4,21 @@ data/*.json
 .env
 *.log
 .DS_Store
+.wrangler/
+wrangler.toml.bak
+
+# Build artifacts
+worker-bundle.mjs
+worker-bundle.js
+worker-final.js
+worker-iife.js
+worker-entry.js
+worker-sw.js
+worker-module.js
+worker-paste.txt
+index-bundle.js
+metadata.json
+src/sw-entry.js
+
+# Temp files
+/sdcard/

@@ -1,13 +1,9 @@
-import { Router } from "express";
-import { getOverview } from "../db.js";
+import { Hono } from "hono";
+import { getOverviewData } from "../db.js";
 
-export const overviewRouter = Router();
+export const overviewRouter = new Hono();
 
-overviewRouter.get("/overview", (_req, res) => {
-  try {
-    const data = getOverview();
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch overview", detail: error.message });
-  }
+overviewRouter.get("/overview", async (c) => {
+  const data = await getOverviewData(c.env);
+  return c.json(data);
 });
