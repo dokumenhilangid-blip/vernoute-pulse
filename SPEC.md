@@ -224,9 +224,6 @@ Cost: $0.01 USDC
 ```
 PORT=3000
 DATABASE_URL=./data/vernoute.db
-CDP_API_KEY_ID=...
-CDP_API_KEY_SECRET=...
-WALLET_ADDRESS=...
 AGENTIC_MARKET_API=https://api.agentic.market/v1
 ```
 
