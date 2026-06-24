@@ -1,0 +1,15 @@
+name = "vernoute-pulse"
+main = "src/index.js"
+compatibility_date = "2026-06-24"
+compatibility_flags = ["nodejs_compat"]
+
+# Scheduled tasks
+[triggers]
+crons = ["0 */6 * * *", "*/30 * * * *"]
+
+# KV Namespace for storage
+# CREATE: npx wrangler kv:namespace create "VERNOUTE_KV"
+# Then uncomment and paste the ID below:
+# [[kv_namespaces]]
+# binding = "VERNOUTE_KV"
+# id = "PASTE_YOUR_KV_NAMESPACE_ID_HERE"
