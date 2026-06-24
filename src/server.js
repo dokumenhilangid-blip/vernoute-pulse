@@ -8,10 +8,11 @@ export function startServer() {
   const app = express();
   app.use(express.json());
 
-  // CORS
+  // Security headers
   app.use((_req, res, next) => {
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Headers", "Content-Type, X-PAYMENT");
+    res.removeHeader("X-Powered-By");
     next();
   });
 
@@ -114,12 +115,58 @@ fetch('/v1/pulse/overview').then(r=>r.json()).then(d=>{
   });
 
   // --- API routes ---
+  // --- Rate limiting (simple in-memory) ---
+  const rateLimitMap = new Map();
+  const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+  const RATE_LIMIT_MAX = 60; // 60 requests per minute
+
+  app.use("/v1/pulse", (_req, res, next) => {
+    const ip = _req.ip || _req.connection?.remoteAddress || "unknown";
+    const now = Date.now();
+    const entry = rateLimitMap.get(ip) || { count: 0, resetAt: now + RATE_LIMIT_WINDOW };
+    
+    if (now > entry.resetAt) {
+      entry.count = 0;
+      entry.resetAt = now + RATE_LIMIT_WINDOW;
+    }
+    
+    entry.count++;
+    rateLimitMap.set(ip, entry);
+
+    res.header("X-RateLimit-Limit", RATE_LIMIT_MAX.toString());
+    res.header("X-RateLimit-Remaining", Math.max(0, RATE_LIMIT_MAX - entry.count).toString());
+
+    if (entry.count > RATE_LIMIT_MAX) {
+      return res.status(429).json({ error: "rate_limited", message: "Too many requests", retry_after: Math.ceil((entry.resetAt - now) / 1000) });
+    }
+    next();
+  });
+
+  // Clean up stale entries every 5 minutes
+  setInterval(() => {
+    const now = Date.now();
+    for (const [ip, entry] of rateLimitMap) {
+      if (now > entry.resetAt) rateLimitMap.delete(ip);
+    }
+  }, 5 * 60 * 1000);
+
+  // --- API routes ---
   app.use("/v1/pulse", overviewRouter);
   app.use("/v1/pulse", servicesRouter);
 
-  // In the future: paid routes via x402 middleware
-  // app.post('/v1/pulse/agent/:address', verifyX402(0.01), agentHandler);
-  // app.post('/v1/pulse/transactions', verifyX402(0.005), txHandler);
+  // --- Method not allowed handler for API routes ---
+  app.use("/v1/pulse", (req, res) => {
+    if (req.method !== "GET") {
+      return res.status(405).json({ error: "method_not_allowed", message: `Method ${req.method} not allowed. Use GET instead.` });
+    }
+    // Unknown path under /v1/pulse
+    return res.status(404).json({ error: "not_found", message: "Endpoint tidak ditemukan. Cek /info untuk daftar endpoint." });
+  });
+
+  // --- 404 handler untuk path lain ---
+  app.use((_req, res) => {
+    res.status(404).json({ error: "not_found", message: "Endpoint tidak ditemukan" });
+  });
 
   return app;
 }
